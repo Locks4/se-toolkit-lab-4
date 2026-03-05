@@ -30,3 +30,47 @@ def test_filter_includes_interaction_at_boundary() -> None:
     result = filter_by_max_item_id(interactions=interactions, max_item_id=2)
     assert len(result) == 1
     assert result[0].id == 1
+
+
+def test_filter_returns_empty_when_max_less_than_any() -> None:
+    # when the supplied maximum is smaller than every item's id, nothing should
+    # pass through the filter.
+    interactions = [_make_log(1, 1, 5), _make_log(2, 2, 6)]
+    result = filter_by_max_item_id(interactions=interactions, max_item_id=4)
+    assert result == []
+
+
+def test_filter_returns_all_when_max_exceeds_all() -> None:
+    # a very large max should leave the list untouched (order preserved).
+    interactions = [_make_log(1, 1, 1), _make_log(2, 2, 2)]
+    result = filter_by_max_item_id(interactions=interactions, max_item_id=999)
+    assert result == interactions
+
+
+def test_filter_handles_zero_and_negative_item_ids() -> None:
+    # item_id values are not constrained by the logic; zero and negatives
+    # should still be compared correctly.
+    interactions = [_make_log(1, 1, 0), _make_log(2, 2, -1), _make_log(3, 3, 2)]
+    result = filter_by_max_item_id(interactions=interactions, max_item_id=0)
+    assert len(result) == 2
+    assert {i.id for i in result} == {1, 2}
+
+
+def test_filter_preserves_order_and_duplicates() -> None:
+    # the filter must not reorder the list or drop duplicates when the
+    # item_id happens to be equal for multiple logs.
+    interactions = [
+        _make_log(1, 1, 3),
+        _make_log(2, 2, 1),
+        _make_log(3, 3, 2),
+        _make_log(4, 4, 2),
+    ]
+    result = filter_by_max_item_id(interactions=interactions, max_item_id=2)
+    assert [i.id for i in result] == [2, 3, 4]
+
+
+def test_filter_with_negative_max_item_id_returns_empty() -> None:
+    # a negative maximum should trivially exclude all positive item IDs.
+    interactions = [_make_log(1, 1, 0), _make_log(2, 2, 1)]
+    result = filter_by_max_item_id(interactions=interactions, max_item_id=-1)
+    assert result == []
